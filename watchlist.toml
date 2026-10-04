@@ -1,0 +1,37 @@
+# Stock watchlist. Edit by hand or from the dashboard sidebar.
+#
+# Tickers use Yahoo Finance symbols:
+#   US: AAPL, MSFT   London: VOD.L, LLOY.L (priced in pence, GBp)   ETFs: VUSA.L
+#
+# Drop thresholds are positive percentages. Leave a rule out to inherit [defaults];
+# set it to 0 to switch it off for that stock.
+#   daily_drop_pct          price vs previous close
+#   drop_from_high_pct      price vs highest close in the last high_lookback_days
+#   drop_from_reference_pct price vs reference_price (e.g. what you paid)
+#   below_price             absolute floor, in the stock's own currency
+
+[settings]
+check_interval_minutes = 15
+# Any of: "console", "desktop", "ntfy", "email"
+notify = ["console", "desktop"]
+
+# Applied to every stock unless the stock overrides it.
+[defaults]
+daily_drop_pct = 3.0
+drop_from_high_pct = 10.0
+high_lookback_days = 90
+
+[[stocks]]
+ticker = "AAPL"
+name = "Apple"
+
+[[stocks]]
+ticker = "MSFT"
+name = "Microsoft"
+daily_drop_pct = 4.0
+
+[[stocks]]
+ticker = "VOD.L"
+name = "Vodafone"
+reference_price = 75.0
+drop_from_reference_pct = 15.0

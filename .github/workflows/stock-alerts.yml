@@ -1,0 +1,54 @@
+# Runs the monitor on a schedule in GitHub's cloud, so alerts arrive even when your
+# computer is off. Only runs from the default branch. Configure the repository secrets
+# for the channels you use (NTFY_TOPIC, and/or SMTP_* + ALERT_EMAIL_TO).
+name: Stock alerts
+
+on:
+  schedule:
+    # Every 30 min, Mon-Fri, 07:00-21:00 UTC (covers London and New York hours).
+    # GitHub may delay scheduled runs by several minutes at busy times.
+    - cron: "*/30 7-21 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: stock-alerts
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # Remember which alerts were already sent, so you aren't notified every 30 minutes.
+      - uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: alert-state-${{ github.run_id }}
+          restore-keys: alert-state-
+
+      - name: Check watchlist
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: |
+          channels=console
+          [ -n "$NTFY_TOPIC" ] && channels="$channels,ntfy"
+          [ -n "$SMTP_USER" ] && channels="$channels,email"
+          python -m stockwatch.monitor --once --notify "$channels"
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: state
+          key: alert-state-${{ github.run_id }}
